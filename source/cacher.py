@@ -1,16 +1,17 @@
 import pickle
 import os
 
-def create_cache(path: str, user_id: str) -> None:
+def create_cache(system_data: list, path: str, user_id: str) -> None:
     '''
     Method creates cache if it is not created
+    :param system_data: system data
     :param path: path to .pkl file
     :param user_id: username
     :return: None
     '''
     if not os.path.exists(f'{path}{user_id}.pkl'):
         with open(f'{path}{user_id}.pkl', 'wb') as file:
-            pickle.dump([], file)
+            pickle.dump(system_data, file)
     else:
         pass
 
@@ -40,9 +41,10 @@ def cache_messages(data: list, path: str, user_id: str) -> None:
         pickle.dump(data, f)
         f.close()
 
-def remove_cache(path: str, user_id: str) -> None:
+def remove_cache(system_data: list, path: str, user_id: str) -> None:
     '''
     Method removes cache
+    :param system_data: system data
     :param path: path to cache
     :param user_id: username
     :return: None
@@ -50,4 +52,5 @@ def remove_cache(path: str, user_id: str) -> None:
     if os.path.exists(f'{path}{user_id}.pkl'):
         with open(f'{path}{user_id}.pkl', 'wb') as file:
             file.truncate(0)
+            pickle.dump(system_data, file)
             file.close()

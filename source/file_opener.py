@@ -1,6 +1,7 @@
 import json
 import yaml
 from yaml.loader import SafeLoader
+import pickle
 
 
 def json_open(path: str) -> dict:
@@ -41,3 +42,12 @@ def txt_open(path: str) -> list:
     '''
     with open(path, 'r') as f:
         return [line.rstrip() for line in f]
+
+def pickle_load(path: str) -> list:
+    '''
+    Method loads pickle to list
+    :param path: path
+    :return: pickle object list
+    '''
+    with open(path, 'rb') as f:
+        return pickle.load(f)
