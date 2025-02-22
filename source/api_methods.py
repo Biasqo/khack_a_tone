@@ -1,5 +1,7 @@
 import requests
 import uuid
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def get_model_data(url: str, payload: dict | str, headers: dict, method: str) -> tuple:

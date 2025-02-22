@@ -24,6 +24,8 @@ if __name__ == '__main__':
     except Exception as e:
         st.error(e)
     if st.session_state['authentication_status']:
+        # st.write(st.session_state)
+        st.session_state['cache_loaded'] = False
         authenticator.logout()
         # start page
         st.write("# Welcome to the main page")

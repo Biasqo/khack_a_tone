@@ -3,7 +3,17 @@ import datetime
 import json
 from source.api_methods import get_model_data
 from source.api_methods import get_uuid
+from source.cacher import cache_messages, load_cache, create_cache, remove_cache
 
+def read_cache() -> None:
+    '''
+    Method read cache
+    :return: None
+    '''
+    create_cache(path=st.secrets['cache_path']['path'], user_id=st.session_state['username'])
+    st.session_state['messages'] = load_cache(path=st.secrets['cache_path']['path'],
+                                              user_id=st.session_state['username'])
+    st.toast('Cache loaded')
 
 def get_token(uuid: str) -> dict:
     '''
@@ -84,8 +94,15 @@ def get_response_from_model(model: str) -> str:
 
     return './/.'.join([x['message']['content'] for x in response.json()['choices']])
 
+
 if __name__ == '__main__':
-    if st.session_state['authentication_status']:
+    if {'authentication_status', 'cache_loaded'} - set(st.session_state):
+        st.switch_page("main.py")
+    elif st.session_state['authentication_status']:
+        if not st.session_state['cache_loaded']:
+            read_cache()
+            st.session_state['cache_loaded'] = True
+
         st.session_state['user_uuid'] = get_uuid()
 
         # get token
@@ -114,6 +131,7 @@ if __name__ == '__main__':
                 clear_chat = st.button('Clear chat')
                 if clear_chat:
                     st.session_state['messages'] = []
+                    remove_cache(path=st.secrets['cache_path']['path'], user_id=st.session_state['username'])
 
             # history
             for message in st.session_state['messages']:
@@ -134,6 +152,8 @@ if __name__ == '__main__':
                     st.markdown(model_message)
                 # Add assistant response to chat history
                 st.session_state.messages.append({"role": "assistant", "content": model_message})
+                cache_messages(data=st.session_state['messages'], path=st.secrets['cache_path']['path'],
+                               user_id=st.session_state['username'])
 
     else:
         st.warning('Please enter your username and password on main page')
