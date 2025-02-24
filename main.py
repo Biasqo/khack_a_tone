@@ -2,6 +2,44 @@ import streamlit as st
 import psutil
 import plotly.express as px
 from source.auth import get_authentication
+from source.dbconnector import get_data_polars, get_data_pandas
+from source.file_opener import sql_open
+
+
+def get_user_data() -> list:
+    client_df = get_data_pandas(dbname=st.secrets['local_db']['url'],
+                                query=sql_open(st.secrets['queries']['client']).format(st.session_state['username']))
+    client_loans_df = get_data_pandas(dbname=st.secrets['local_db']['url'],
+                                query=sql_open(st.secrets['queries']['client_loans']).format(
+                                    st.session_state['username']))
+    client_offers_df = get_data_pandas(dbname=st.secrets['local_db']['url'],
+                                query=sql_open(st.secrets['queries']['client_offers']).format(
+                                    st.session_state['username']))
+    response = [{"role": "system", "content": '''
+                Нужно помочь твоему собеседнику с получением кредита в Сбербанке.
+                Для этого ты должен ему порекомендовать некие действия для получения кредита.
+                Рекомендации давать только людям которым больше 18 лет.
+                Сначала поговори с собеседником и отвечай вежливо.
+                
+                Отвечать нужно только по поводу кредитования и данных собеседника, на остальные вопросы отвечай:
+                    Не могу подсказать в данном вопросе.
+                    
+                --
+                Твой собеседник: {}, возраст {}, категория клиента {}.
+                У него есть: кредиты {}, просроченный платеж {}, ежемесячный платеж {} соответственно (в рублях).
+                Его актуальные предложения от Сбербанка: продукт {}, одобренная сумма {}, рекомендации к действию {}.
+                Чтобы получить кредит в Сбере ему нужно на основе рекомендаций выше, понять что делать
+                '''.format(client_df.to_dict('records')[0]['name']
+                           , client_df.to_dict('records')[0]['age']
+                           , client_df.to_dict('records')[0]['group_info']
+                           , ', '.join([x['loan_id'] for x in client_loans_df.to_dict('records')])
+                           , ', '.join([str(x['current_overdue']) for x in client_loans_df.to_dict('records')])
+                           , ', '.join([str(x['current_loan_payments']) for x in client_loans_df.to_dict('records')])
+                           , ', '.join([str(x['product']) for x in client_offers_df.to_dict('records')])
+                           , ', '.join([str(x['approved_sum']) for x in client_offers_df.to_dict('records')])
+                           , ', '.join([x['recommendation'] for x in client_offers_df.to_dict('records')]))}]
+    return response
+
 
 if __name__ == '__main__':
 
@@ -25,17 +63,10 @@ if __name__ == '__main__':
         st.error(e)
     if st.session_state['authentication_status']:
         # st.write(st.session_state)
+        st.header(f'Welcome, {st.session_state['username']}!', divider="rainbow")
         st.session_state['cache_loaded'] = False
-        st.session_state['user_system_info'] = [{"role": "system", "content": '''
-                Представь что ты разговариваешь с Ивановым Иваном Ивановичем.
-                У него 3 потребительских кредита на сумму 350000 рублей в Альфа банке
-                    , 2 ипотеки на сумму 3000000 рублей в ВТБ и кредитная карта в Сбере с лимитом 100000 рублей.
-                Он не является клиентом Сбера.
-                Чтобы получить кредит в Сбере ему нужно: обязательно принести справку о доходе 2НДФЛ
-                    , по желанию закрыть ипотеку в ВТБ
-                Отвечать нужно только по поводу кредитования и данных собеседника, на остальные вопросы отвечай:
-                    Не могу подсказать в данном вопросе
-                '''}]
+        st.session_state['user_system_info'] = get_user_data()
+        # st.write(st.session_state['user_system_info'])
         authenticator.logout()
         # start page
         st.write("# Welcome to the main page")

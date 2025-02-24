@@ -109,6 +109,7 @@ if __name__ == '__main__':
 
         st.session_state['user_uuid'] = get_uuid()
 
+        st.header('Click `Get token` to acquire a token!', divider='rainbow')
         # get token
         token_button = st.button("Get token")
         if token_button:
