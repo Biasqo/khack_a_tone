@@ -5,4 +5,5 @@ CREATE TABLE loan_offers (
     , decision varchar(255)
     , reason varchar(255)
     , approved_sum float
+    , product_name varchar(255)
 );

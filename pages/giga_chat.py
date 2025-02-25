@@ -142,9 +142,9 @@ if __name__ == '__main__':
 
             # history
             for message in st.session_state['messages']:
-                # if message['role'] != 'system':
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+                if message['role'] != 'system':
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
 
             # react to user input
             if prompt := st.chat_input("Ask AI", disabled=prompt_disabled):
