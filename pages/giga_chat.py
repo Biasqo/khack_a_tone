@@ -7,10 +7,10 @@ from source.cacher import cache_messages, load_cache, create_cache, remove_cache
 
 
 def read_cache() -> None:
-    '''
+    """
     Method read cache
     :return: None
-    '''
+    """
     create_cache(system_data=st.session_state['user_system_info']
                  , path=st.secrets['cache_path']['path']
                  , user_id=st.session_state['username'])
@@ -20,11 +20,11 @@ def read_cache() -> None:
 
 
 def get_token(uuid: str) -> dict:
-    '''
+    """
     Method returns token for Gigachat API
     :param uuid: random generated uuid
     :return: dict
-    '''
+    """
     # get token
     token_headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -48,11 +48,11 @@ def get_token(uuid: str) -> dict:
 
 
 def get_model_types(token: str) -> dict:
-    '''
+    """
     Method returns list of available models
     :param token: token
     :return: dict
-    '''
+    """
     # get models
     model_headers = {
         'Accept': 'application/json',
@@ -71,35 +71,18 @@ def get_model_types(token: str) -> dict:
         st.stop()
 
 
-def get_response_from_model(model: str) -> str:
-    '''
-    Method returns user input and model result
-    :param model: model type
-    :return: model response
-    '''
-    prompt_payload = json.dumps({
-        "model": model,
-        "messages": st.session_state['messages'],
-        "stream": False,
-        "update_interval": 0
-    })
-    prompt_headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': f'Bearer {st.session_state['token_data']['access_token']}'
-    }
-
-    response, status = get_model_data(
-        url=st.secrets['model_answer_api']['url']
-        , payload=prompt_payload
-        , headers=prompt_headers
-        , method="POST"
-    )
-
-    return './/.'.join([x['message']['content'] for x in response.json()['choices']])
+def remove_button() -> None:
+    with st.sidebar:
+        clear_chat = st.button('Clear chat')
+        if clear_chat:
+            st.session_state['messages'] = []
+            remove_cache(system_data=[]
+                         , path=st.secrets['cache_path']['path']
+                         , user_id=st.session_state['username'])
 
 
 if __name__ == '__main__':
+    remove_button()
     if {'authentication_status', 'cache_loaded', 'user_system_info'} - set(st.session_state):
         st.switch_page("main.py")
     elif st.session_state['authentication_status']:
@@ -132,19 +115,10 @@ if __name__ == '__main__':
             if "messages" not in st.session_state:
                 st.session_state['messages'] = []
 
-            with st.sidebar:
-                clear_chat = st.button('Clear chat')
-                if clear_chat:
-                    st.session_state['messages'] = st.session_state['user_system_info']
-                    remove_cache(system_data=st.session_state['user_system_info']
-                                 , path=st.secrets['cache_path']['path']
-                                 , user_id=st.session_state['username'])
-
             # history
             for message in st.session_state['messages']:
-                if message['role'] != 'system':
-                    with st.chat_message(message["role"]):
-                        st.markdown(message["content"])
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
 
             # react to user input
             if prompt := st.chat_input("Ask AI", disabled=prompt_disabled):
@@ -153,8 +127,11 @@ if __name__ == '__main__':
                     st.markdown(prompt)
                 # add user message to chat history
                 st.session_state.messages.append({"role": "user", "content": prompt})
+                model_message = st.session_state.agent_speaker.run_model(messages=st.session_state['messages']
+                                                                         , token=st.session_state['token_data'][
+                        'access_token']
+                                                                         , model=model_selection)
 
-                model_message = get_response_from_model(model=model_selection)
                 # display assistant response in chat message container
                 with st.chat_message("assistant"):
                     st.markdown(model_message)

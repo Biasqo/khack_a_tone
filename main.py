@@ -4,9 +4,10 @@ import plotly.express as px
 from source.auth import get_authentication
 from source.dbconnector import get_data_polars, get_data_pandas
 from source.file_opener import sql_open
+from source.agent import Agent
 
 
-def get_user_data() -> list:
+def get_user_data() -> str:
     client_df = get_data_pandas(dbname=st.secrets['local_db']['url'],
                                 query=sql_open(st.secrets['queries']['client']).format(st.session_state['username']))
     client_loans_df = get_data_pandas(dbname=st.secrets['local_db']['url'],
@@ -26,25 +27,16 @@ def get_user_data() -> list:
                                              f' Рекомендации к действию: {x['recommendation']}\n'
                                              for x in client_offers_df.to_dict('records')])
 
-    response = [{"role": "system", "content": '''Нужно помочь твоему собеседнику с получением кредита в Сбербанке.
-    Для этого ты должен ему порекомендовать некие действия для получения кредита.
-    Рекомендации давать только людям которым больше 18 лет.
-    Сначала поговори с собеседником и отвечай вежливо, обращайся по имени и отчеству.
-    Если у него нет рекомендаций к действию, то предложи ему рассчитать себе кредитный потенциал.
-    Если его одобренная сумма равна 0.0, это значит что он получил отказ по этому продукту, 
-        говорить эту сумму клиенту не надо.
-    Чтобы получить кредит в Сбере ему нужно на основе рекомендаций, понять что делать.
-    Отвечать нужно только по поводу кредитования и данных собеседника, на остальные вопросы отвечай: 
-    Не могу подсказать в данном вопросе.
+    response = '''
     --
-    Твой собеседник: {}, возраст {}, категория клиента {}.
+    Твой клиент: {}, возраст {}, категория клиента {}.
     У него есть: {};
-    Его актуальные предложения от Сбербанка: {};'''.format(
+    Его актуальные кредитные предложения от Сбербанка: {}'''.format(
         client_df.to_dict('records')[0]['name']
         , client_df.to_dict('records')[0]['age']
         , client_df.to_dict('records')[0]['group_info']
         , preprocessed_db_data_loans
-        , preprocessed_db_data_offers)}]
+        , preprocessed_db_data_offers)
     return response
 
 
@@ -73,6 +65,40 @@ if __name__ == '__main__':
         st.header(f'Welcome, {st.session_state['username']}!', divider="rainbow")
         st.session_state['cache_loaded'] = False
         st.session_state['user_system_info'] = get_user_data()
+        st.session_state.agent_speaker = Agent(
+            secrets=st.secrets
+            , agent_type=[{'role': 'system', 'content': '''
+                                            Представь что ты опытный сотрудник поддержки банка с 30 летним стажем
+                                            Твоя задача выслушать клиента и собрать с него максимум информации для получения кредита
+                                            Твой клиент: {}
+                                            '''.format(st.session_state['user_system_info'])}]
+        )
+
+        st.session_state.agent_creditor = Agent(
+            secrets=st.secrets
+            , agent_type=[{'role': 'system', 'content': '''
+                                            Представь что ты опытный кредитор банка с 30 летним стажем.
+                                            Твоя задача проверить клиента и оценить можно ли ему выдать кредит
+                                            с комментариями.
+                                            '''}]
+        )
+        st.session_state.agent_validator = Agent(
+            secrets=st.secrets
+            , agent_type=[{'role': 'system', 'content': '''
+                                            Представь что ты опытный аудитор банка с 30 летним стажем.
+                                            Твоя задача проверить диалог с клиентом и понять адекватно ли сотрудник банка отвечает клиенту
+                                            с комментариями.
+                                            '''}]
+        )
+        st.session_state.agent_recommendation = Agent(
+            secrets=st.secrets
+            , agent_type=[{'role': 'system', 'content': '''
+                                                Представь что ты лицо принимающее решение в банке с опытом работы 30 лет.
+                                                Твоя задача проанализировать диалоги от других агентов и понять что делать с клиентом
+                                                Диалог будет представлен в виде текста, ты должен на основании этого текста дать рекомендации
+                                                по кредитованию
+                                                '''}]
+        )
         # st.write(st.session_state['user_system_info'])
         authenticator.logout()
         # start page
