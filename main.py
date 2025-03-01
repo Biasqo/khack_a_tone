@@ -65,40 +65,32 @@ if __name__ == '__main__':
         st.header(f'Welcome, {st.session_state['username']}!', divider="rainbow")
         st.session_state['cache_loaded'] = False
         st.session_state['user_system_info'] = get_user_data()
-        st.session_state.agent_speaker = Agent(
+        st.session_state.agent_creditor = Agent(
             secrets=st.secrets
             , agent_type=[{'role': 'system', 'content': '''
-                                            Представь что ты опытный сотрудник поддержки банка с 30 летним стажем
+                                            Представь что ты опытный кредитор банка с 30 летним стажем в банке Сбербанк
                                             Твоя задача выслушать клиента и собрать с него максимум информации для получения кредита
                                             Твой клиент: {}
                                             '''.format(st.session_state['user_system_info'])}]
         )
 
-        st.session_state.agent_creditor = Agent(
-            secrets=st.secrets
-            , agent_type=[{'role': 'system', 'content': '''
-                                            Представь что ты опытный кредитор банка с 30 летним стажем.
-                                            Твоя задача проверить клиента и оценить можно ли ему выдать кредит
-                                            с комментариями.
-                                            '''}]
-        )
         st.session_state.agent_validator = Agent(
             secrets=st.secrets
             , agent_type=[{'role': 'system', 'content': '''
-                                            Представь что ты опытный аудитор банка с 30 летним стажем.
+                                            Представь что ты опытный аудитор банка с 30 летним стажем в банке Сбербанк.
                                             Твоя задача проверить диалог с клиентом и понять адекватно ли сотрудник банка отвечает клиенту
-                                            с комментариями.
+                                            с комментариями. Есть ли связность текста в ответах сотрудника.
                                             '''}]
         )
         st.session_state.agent_recommendation = Agent(
             secrets=st.secrets
             , agent_type=[{'role': 'system', 'content': '''
-                                                Представь что ты лицо принимающее решение в банке с опытом работы 30 лет.
-                                                Твоя задача проанализировать диалоги от других агентов и понять что делать с клиентом
-                                                Диалог будет представлен в виде текста, ты должен на основании этого текста дать рекомендации
-                                                по кредитованию
+                                                Представь что ты лицо принимающее решение в банке с опытом работы 30 лет в банке Сбербанк.
+                                                Твоя задача проанализировать диалог и сказать что кредитору делать дальше.
+                                                Отвечай ему так: кредитор, вот новая информация: 
                                                 '''}]
         )
+        st.session_state['msg_cnt'] = 0
         # st.write(st.session_state['user_system_info'])
         authenticator.logout()
         # start page

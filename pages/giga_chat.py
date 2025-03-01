@@ -71,6 +71,27 @@ def get_model_types(token: str) -> dict:
         st.stop()
 
 
+def orchestrator(model: str) -> str:
+    if st.session_state['msg_cnt'] > 0 and st.session_state['msg_cnt'] % 5 == 0:
+        recent_messages = ';\n'.join([f"{x['role']}:\n{x['content']}" for x in st.session_state['messages']])
+        response_validator = st.session_state.agent_validator.run_model(
+            messages=[{'role': 'user', 'content': recent_messages}]
+            , token=st.session_state['token_data']['access_token']
+            , model=model)
+        result = st.session_state.agent_recommendation.run_model(
+            messages=[{'role': 'user', 'content': recent_messages + response_validator}]
+            , token=st.session_state['token_data']['access_token']
+            , model=model)
+        st.session_state['user_system_info'] += f'.\n{result}'
+        return st.session_state.agent_creditor.run_model(messages=st.session_state['messages']
+                                                  , token=st.session_state['token_data']['access_token']
+                                                  , model=model)
+    else:
+        return st.session_state.agent_creditor.run_model(messages=st.session_state['messages']
+                                                         , token=st.session_state['token_data']['access_token']
+                                                         , model=model)
+
+
 def remove_button() -> None:
     with st.sidebar:
         clear_chat = st.button('Clear chat')
@@ -115,22 +136,22 @@ if __name__ == '__main__':
             if "messages" not in st.session_state:
                 st.session_state['messages'] = []
 
+            st.write(st.session_state['msg_cnt'])
+            st.write(st.session_state['user_system_info'])
+
             # history
             for message in st.session_state['messages']:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
-
             # react to user input
             if prompt := st.chat_input("Ask AI", disabled=prompt_disabled):
+                st.session_state['msg_cnt'] += 1
                 # display user message in chat message container
                 with st.chat_message("user"):
                     st.markdown(prompt)
                 # add user message to chat history
                 st.session_state.messages.append({"role": "user", "content": prompt})
-                model_message = st.session_state.agent_speaker.run_model(messages=st.session_state['messages']
-                                                                         , token=st.session_state['token_data'][
-                        'access_token']
-                                                                         , model=model_selection)
+                model_message = orchestrator(model=model_selection)
 
                 # display assistant response in chat message container
                 with st.chat_message("assistant"):
