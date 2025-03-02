@@ -4,6 +4,7 @@ import json
 from source.api_methods import get_model_data
 from source.api_methods import get_uuid
 from source.cacher import cache_messages, load_cache, create_cache, remove_cache
+from source.agent import Agent
 
 
 def read_cache() -> None:
@@ -72,20 +73,47 @@ def get_model_types(token: str) -> dict:
 
 
 def orchestrator(model: str) -> str:
+    if st.session_state['msg_cnt'] == 1:
+        result = st.session_state.agent_data.run_model(
+            messages=[{'role': 'user', 'content': st.session_state['user_system_info']}]
+            , token=st.session_state['token_data']['access_token']
+            , model=model)
+        st.session_state['user_system_info'] = result
+        st.session_state.agent_creditor = Agent(
+            secrets=st.secrets
+            , agent_type=[{'role': 'system', 'content': '''
+                                            Представь что ты опытный кредитор банка с 30 летним стажем в банке Сбербанк
+                                            Твоя задача выслушать клиента и помочь в получении кредита
+                                            Все контактные и паспортные данные клиента ты уже имеешь.
+                                            Далее будет информация от твоих коллег:
+                                            {}
+                                            '''.format(st.session_state['user_system_info'])}]
+        )
     if st.session_state['msg_cnt'] > 0 and st.session_state['msg_cnt'] % 5 == 0:
         recent_messages = ';\n'.join([f"{x['role']}:\n{x['content']}" for x in st.session_state['messages']])
-        response_validator = st.session_state.agent_validator.run_model(
+        response_auditor = st.session_state.agent_auditor.run_model(
             messages=[{'role': 'user', 'content': recent_messages}]
             , token=st.session_state['token_data']['access_token']
             , model=model)
-        result = st.session_state.agent_recommendation.run_model(
-            messages=[{'role': 'user', 'content': recent_messages + response_validator}]
+        result = st.session_state.agent_creditor_helper.run_model(
+            messages=[{'role': 'user', 'content': st.session_state['user_system_info']
+                                                  + recent_messages + response_auditor}]
             , token=st.session_state['token_data']['access_token']
             , model=model)
-        st.session_state['user_system_info'] += f'.\n{result}'
+        st.session_state['user_system_info'] += f' \n{result}'
+        st.session_state.agent_creditor = Agent(
+            secrets=st.secrets
+            , agent_type=[{'role': 'system', 'content': '''
+                                                    Представь что ты опытный кредитор банка с 30 летним стажем в банке Сбербанк
+                                                    Твоя задача выслушать клиента и собрать с него максимум информации для получения кредита
+                                                    Все контактные и паспортные данные клиента ты уже имеешь.
+                                                    Далее будет информация от твоих коллег:
+                                                    {}
+                                                    '''.format(st.session_state['user_system_info'])}]
+        )
         return st.session_state.agent_creditor.run_model(messages=st.session_state['messages']
-                                                  , token=st.session_state['token_data']['access_token']
-                                                  , model=model)
+                                                         , token=st.session_state['token_data']['access_token']
+                                                         , model=model)
     else:
         return st.session_state.agent_creditor.run_model(messages=st.session_state['messages']
                                                          , token=st.session_state['token_data']['access_token']
@@ -137,7 +165,6 @@ if __name__ == '__main__':
                 st.session_state['messages'] = []
 
             st.write(st.session_state['msg_cnt'])
-            st.write(st.session_state['user_system_info'])
 
             # history
             for message in st.session_state['messages']:

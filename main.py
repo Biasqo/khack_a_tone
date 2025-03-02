@@ -29,12 +29,13 @@ def get_user_data() -> str:
 
     response = '''
     --
-    Твой клиент: {}, возраст {}, категория клиента {}.
+    Твой клиент: {}, возраст: {}, категория клиента: {}, ежемесячный доход: {}.
     У него есть: {};
     Его актуальные кредитные предложения от Сбербанка: {}'''.format(
         client_df.to_dict('records')[0]['name']
         , client_df.to_dict('records')[0]['age']
         , client_df.to_dict('records')[0]['group_info']
+        , client_df.to_dict('records')[0]['avg_income']
         , preprocessed_db_data_loans
         , preprocessed_db_data_offers)
     return response
@@ -65,31 +66,37 @@ if __name__ == '__main__':
         st.header(f'Welcome, {st.session_state['username']}!', divider="rainbow")
         st.session_state['cache_loaded'] = False
         st.session_state['user_system_info'] = get_user_data()
-        st.session_state.agent_creditor = Agent(
+        st.session_state.agent_data = Agent(
             secrets=st.secrets
             , agent_type=[{'role': 'system', 'content': '''
-                                            Представь что ты опытный кредитор банка с 30 летним стажем в банке Сбербанк
-                                            Твоя задача выслушать клиента и собрать с него максимум информации для получения кредита
-                                            Твой клиент: {}
-                                            '''.format(st.session_state['user_system_info'])}]
+                                                    Представь что ты опытный кредитор банка с 30 летним стажем в банке Сбербанк
+                                                    Твоя задача выслушать клиента и разложить эту информацию для кредитора
+                                                    Делай акцент на одобренных предложениях
+                                                    Все контактные и паспортные данные клиента ты уже имеешь.
+                                                    Отвечай так: Кредитор, вот информация по клиенту:
+                                                    '''}]
         )
 
-        st.session_state.agent_validator = Agent(
+        st.session_state.agent_auditor = Agent(
             secrets=st.secrets
             , agent_type=[{'role': 'system', 'content': '''
                                             Представь что ты опытный аудитор банка с 30 летним стажем в банке Сбербанк.
-                                            Твоя задача проверить диалог с клиентом и понять адекватно ли сотрудник банка отвечает клиенту
-                                            с комментариями. Есть ли связность текста в ответах сотрудника.
+                                            Твоя задача проверить диалог с клиентом (user) и понять адекватно ли сотрудник банка (assistant) отвечает клиенту
+                                            с комментариями. Есть ли смысл в ответах сотрудника?
+                                            Твой собеседник лицо принимающее решение в банке, ответь ему так:
+                                            Лицо принимающее решение, вот что я думаю о диалоге клиента с банком
                                             '''}]
         )
-        st.session_state.agent_recommendation = Agent(
+        st.session_state.agent_creditor_helper = Agent(
             secrets=st.secrets
             , agent_type=[{'role': 'system', 'content': '''
                                                 Представь что ты лицо принимающее решение в банке с опытом работы 30 лет в банке Сбербанк.
                                                 Твоя задача проанализировать диалог и сказать что кредитору делать дальше.
-                                                Отвечай ему так: кредитор, вот новая информация: 
+                                                Отвечай ему только так: 
+                                                Кредитор, вот новая информация: 
                                                 '''}]
         )
+
         st.session_state['msg_cnt'] = 0
         # st.write(st.session_state['user_system_info'])
         authenticator.logout()

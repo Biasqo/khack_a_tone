@@ -3,4 +3,5 @@ CREATE TABLE clients (
     , name varchar(255)
     , cust_group varchar(255)
     , age int
+    , avg_income float
 );
