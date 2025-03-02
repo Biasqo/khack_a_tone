@@ -131,66 +131,63 @@ def remove_button() -> None:
 
 
 if __name__ == '__main__':
-    try:
-        remove_button()
-        if {'authentication_status', 'cache_loaded', 'user_system_info'} - set(st.session_state):
-            st.switch_page("main.py")
-        elif st.session_state['authentication_status']:
-            if not st.session_state['cache_loaded']:
-                read_cache()
-                st.session_state['cache_loaded'] = True
+    remove_button()
+    if {'authentication_status', 'cache_loaded', 'user_system_info'} - set(st.session_state):
+        st.switch_page("main.py")
+    elif st.session_state['authentication_status']:
+        if not st.session_state['cache_loaded']:
+            read_cache()
+            st.session_state['cache_loaded'] = True
 
-            st.session_state['user_uuid'] = get_uuid()
+        st.session_state['user_uuid'] = get_uuid()
 
-            st.header('Click `Get token` to acquire a token!', divider='rainbow')
-            # get token
-            token_button = st.button("Get token")
-            if token_button:
-                st.session_state['token_data'] = get_token(uuid=st.session_state['user_uuid'])
-                st.session_state['token_expire'] = datetime.datetime.fromtimestamp(
-                    st.session_state['token_data']['expires_at'] / 1000)
-            if 'token_data' in st.session_state.keys():
-                # expiration date
-                st.caption(f"Token expires at: {st.session_state['token_expire']}")
+        st.header('Click `Get token` to acquire a token!', divider='rainbow')
+        # get token
+        token_button = st.button("Get token")
+        if token_button:
+            st.session_state['token_data'] = get_token(uuid=st.session_state['user_uuid'])
+            st.session_state['token_expire'] = datetime.datetime.fromtimestamp(
+                st.session_state['token_data']['expires_at'] / 1000)
+        if 'token_data' in st.session_state.keys():
+            # expiration date
+            st.caption(f"Token expires at: {st.session_state['token_expire']}")
 
-                # model types
-                prompt_disabled = True
-                model_types = get_model_types(token=st.session_state['token_data']['access_token'])
-                model_selection = st.pills('Choose available model: ', [x['id'] for x in model_types['data']],
-                                           selection_mode='single')
+            # model types
+            prompt_disabled = True
+            model_types = get_model_types(token=st.session_state['token_data']['access_token'])
+            model_selection = st.pills('Choose available model: ', [x['id'] for x in model_types['data']],
+                                       selection_mode='single')
 
-                if model_selection:
-                    prompt_disabled = False
+            if model_selection:
+                prompt_disabled = False
 
-                if "messages" not in st.session_state:
-                    st.session_state['messages'] = []
+            if "messages" not in st.session_state:
+                st.session_state['messages'] = []
 
-                st.write(st.session_state['msg_cnt'])
+            st.write(st.session_state['msg_cnt'])
 
-                # history
-                if st.session_state['msg_cnt'] > 0:
-                    for message in st.session_state['messages']:
-                        with st.chat_message(message["role"]):
-                            st.markdown(message["content"])
-                # react to user input
-                if prompt := st.chat_input("Ask AI", disabled=prompt_disabled):
-                    st.session_state['msg_cnt'] += 1
-                    # display user message in chat message container
-                    with st.chat_message("user"):
-                        st.markdown(prompt)
-                    # add user message to chat history
-                    st.session_state.messages.append({"role": "user", "content": prompt})
-                    model_message = orchestrator(model=model_selection)
+            # history
+            if st.session_state['msg_cnt'] > 0:
+                for message in st.session_state['messages']:
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
+            # react to user input
+            if prompt := st.chat_input("Ask AI", disabled=prompt_disabled):
+                st.session_state['msg_cnt'] += 1
+                # display user message in chat message container
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                # add user message to chat history
+                st.session_state.messages.append({"role": "user", "content": prompt})
+                model_message = orchestrator(model=model_selection)
 
-                    # display assistant response in chat message container
-                    with st.chat_message("assistant"):
-                        st.markdown(model_message)
-                    # Add assistant response to chat history
-                    st.session_state.messages.append({"role": "assistant", "content": model_message})
-                    cache_messages(data=st.session_state['messages'], path=st.secrets['cache_path']['path'],
-                                   user_id=st.session_state['username'])
+                # display assistant response in chat message container
+                with st.chat_message("assistant"):
+                    st.markdown(model_message)
+                # Add assistant response to chat history
+                st.session_state.messages.append({"role": "assistant", "content": model_message})
+                cache_messages(data=st.session_state['messages'], path=st.secrets['cache_path']['path'],
+                               user_id=st.session_state['username'])
 
-        else:
-            st.warning('Please enter your username and password on main page')
-    except Exception as e:
-        st.switch_page('main.py')
+    else:
+        st.warning('Please enter your username and password on main page')
