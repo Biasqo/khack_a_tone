@@ -98,7 +98,7 @@ if __name__ == '__main__':
         )
 
         st.session_state['msg_cnt'] = 0
-        # st.write(st.session_state['user_system_info'])
+        st.write(st.session_state['user_system_info'])
         authenticator.logout()
         # start page
         st.write("# Welcome to the main page")
