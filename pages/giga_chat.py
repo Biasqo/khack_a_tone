@@ -167,9 +167,10 @@ if __name__ == '__main__':
             st.write(st.session_state['msg_cnt'])
 
             # history
-            for message in st.session_state['messages']:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+            if st.session_state['messages']:
+                for message in st.session_state['messages']:
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
             # react to user input
             if prompt := st.chat_input("Ask AI", disabled=prompt_disabled):
                 st.session_state['msg_cnt'] += 1
