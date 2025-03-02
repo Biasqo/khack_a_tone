@@ -167,7 +167,7 @@ if __name__ == '__main__':
             st.write(st.session_state['msg_cnt'])
 
             # history
-            if st.session_state['messages']:
+            if st.session_state['msg_cnt'] > 0:
                 for message in st.session_state['messages']:
                     with st.chat_message(message["role"]):
                         st.markdown(message["content"])
